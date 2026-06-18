@@ -1,0 +1,22 @@
+name: Cron Repost
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'  # every 15 minutes
+  workflow_dispatch:          # allow manual runs
+
+jobs:
+  repost:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run reposter
+        run: |
+          docker run --rm \
+            -e REDDIT_CLIENT_ID=${{ secrets.REDDIT_CLIENT_ID }} \
+            -e REDDIT_CLIENT_SECRET=${{ secrets.REDDIT_CLIENT_SECRET }} \
+            -e REDDIT_USERNAME=${{ secrets.REDDIT_USERNAME }} \
+            -e REDDIT_PASSWORD=${{ secrets.REDDIT_PASSWORD }} \
+            -v ${{ github.workspace }}/config.yaml:/config.yaml \
+            ghcr.io/${{ github.repository }}:latest

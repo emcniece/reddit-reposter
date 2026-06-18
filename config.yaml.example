@@ -1,0 +1,11 @@
+routes:
+  - source: leagueoflegends        # subreddit name without r/
+    destination: my_lol_highlights
+    filters:
+      title_regex: '^\[Highlight\]' # optional; Go regexp syntax
+      flair: "Highlight"            # optional; exact match (note: currently a no-op, see README)
+
+  - source: programming
+    destination: my_go_feed
+    filters:
+      title_regex: '\bgo\b|\bgolang\b'
