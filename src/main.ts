@@ -160,11 +160,25 @@ Devvit.addTrigger({
       await context.redis.set(redisKey(postId), crosspost.id);
       console.log(`crossposted ${postId} ("${title}") → r/${destination} as ${crosspost.id} (via flair update)`);
     } else if (!matches && existingCrosspostId) {
-      // Flair changed away from the target — remove the crosspost.
-      const crosspost = await context.reddit.getPostById(existingCrosspostId);
-      await crosspost.delete();
-      await context.redis.del(redisKey(postId));
-      console.log(`removed crosspost ${existingCrosspostId} (source ${postId} flair changed to "${flair}")`);
+      // Flair changed away from the target — attempt to delete the crosspost.
+      // NOTE: Devvit restricts post actions to the subreddit where the app is
+      // installed. Since the crosspost lives in the destination sub (a different
+      // subreddit), this will fail until Devvit adds cross-subreddit action support.
+      // The crosspost ID is logged so it can be removed manually.
+      try {
+        const crosspost = await context.reddit.getPostById(existingCrosspostId);
+        await crosspost.delete();
+        await context.redis.del(redisKey(postId));
+        console.log(`deleted crosspost ${existingCrosspostId} (source ${postId} flair changed to "${flair}")`);
+      } catch (err) {
+        // Clear tracking so we don't retry on every subsequent flair event.
+        await context.redis.del(redisKey(postId));
+        console.log(
+          `MANUAL ACTION REQUIRED: could not delete crosspost ${existingCrosspostId} in r/${destination} ` +
+          `(source post ${postId} flair changed to "${flair}"). ` +
+          `Devvit cannot delete posts outside the installed subreddit. Error: ${err}`,
+        );
+      }
     }
   },
 });
