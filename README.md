@@ -48,6 +48,11 @@ Devvit cannot delete posts outside the subreddit the app is installed on. To aut
 
 ```sh
 devvit install <destination-subreddit>
+# or:
+# devvit playtest sub_reposter_dev
+
+devvit logs LangfordStagingSub --show-timestamps
+devvit logs sub_reposter_dev --show-timestamps
 ```
 
 Configure with:
