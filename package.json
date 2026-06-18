@@ -1,6 +1,6 @@
 {
-  "name": "reddit-reposter",
-  "version": "0.0.1",
+  "name": "sub-reposter",
+  "version": "0.0.0",
   "type": "module",
   "private": true,
   "scripts": {
@@ -13,5 +13,6 @@
   },
   "devDependencies": {
     "typescript": "^6.0.3"
-  }
+  },
+  "license": "BSD-3-Clause"
 }
