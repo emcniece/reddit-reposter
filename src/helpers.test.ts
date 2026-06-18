@@ -129,10 +129,11 @@ describe('getSettings', () => {
       flairFilter: 'News',
       excludeFlair: 'Politics',
       titleRegex: '^\\[OC\\]',
+      copyFlair: false,
     });
   });
 
-  it('defaults missing settings to empty strings', async () => {
+  it('defaults missing settings to empty strings and false', async () => {
     const ctx = makeContext({});
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const result = await getSettings(ctx as any);
@@ -141,18 +142,20 @@ describe('getSettings', () => {
       flairFilter: '',
       excludeFlair: '',
       titleRegex: '',
+      copyFlair: false,
     });
   });
 
-  it('reads all four settings in parallel', async () => {
+  it('reads all five settings in parallel', async () => {
     const get = vi.fn((key: string) => Promise.resolve(key));
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await getSettings({ settings: { get } } as any);
-    expect(get).toHaveBeenCalledTimes(4);
+    expect(get).toHaveBeenCalledTimes(5);
     expect(get).toHaveBeenCalledWith('destination_subreddit');
     expect(get).toHaveBeenCalledWith('flair_filter');
     expect(get).toHaveBeenCalledWith('exclude_flair');
     expect(get).toHaveBeenCalledWith('title_regex');
+    expect(get).toHaveBeenCalledWith('copy_flair');
   });
 });
 

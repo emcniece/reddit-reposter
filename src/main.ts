@@ -56,9 +56,36 @@ Devvit.addSettings([
         scope: SettingScope.Installation,
         isSecret: false,
       },
+      {
+        name: 'copy_flair',
+        label: 'Copy flair to crosspost',
+        helpText: 'When enabled, the source post\'s flair text is applied to the crosspost. Requires the destination subreddit to allow flair.',
+        type: 'boolean',
+        scope: SettingScope.Installation,
+        defaultValue: false,
+      },
     ],
   },
 ]);
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+async function applyFlair(
+  context: TriggerContext,
+  crosspostId: string,
+  destination: string,
+  flair: string,
+): Promise<void> {
+  if (!flair) return;
+  try {
+    await context.reddit.setPostFlair({ subredditName: destination, postId: crosspostId, text: flair });
+    console.log(`set flair "${flair}" on crosspost ${crosspostId}`);
+  } catch (err) {
+    console.error(`could not set flair "${flair}" on crosspost ${crosspostId}: ${err}`);
+  }
+}
 
 // ---------------------------------------------------------------------------
 // AppInstall — schedule the monitor cron job for all installations.
@@ -86,7 +113,7 @@ Devvit.addTrigger({
 Devvit.addTrigger({
   event: 'PostCreate',
   async onEvent(event, context) {
-    const { destination, flairFilter, excludeFlair, titleRegex } = await getSettings(context);
+    const { destination, flairFilter, excludeFlair, titleRegex, copyFlair } = await getSettings(context);
 
     if (destination) {
       // SOURCE MODE: crosspost if the new post matches all filters.
@@ -108,6 +135,7 @@ Devvit.addTrigger({
       const post = await context.reddit.getPostById(postId);
       const crosspost = await post.crosspost({ subredditName: destination, title: post.title });
       await context.redis.set(redisKey(postId), crosspost.id);
+      if (copyFlair) await applyFlair(context, crosspost.id, destination, flair);
       console.log(`crossposted ${postId} ("${title}") → r/${destination} as ${crosspost.id}`);
 
     } else if (excludeFlair) {
@@ -133,7 +161,7 @@ Devvit.addTrigger({
 Devvit.addTrigger({
   event: 'PostFlairUpdate',
   async onEvent(event, context) {
-    const { destination, flairFilter, excludeFlair, titleRegex } = await getSettings(context);
+    const { destination, flairFilter, excludeFlair, titleRegex, copyFlair } = await getSettings(context);
     if (!destination) return;
 
     if (!flairFilter && !excludeFlair) return;
@@ -151,6 +179,7 @@ Devvit.addTrigger({
       const post = await context.reddit.getPostById(postId);
       const crosspost = await post.crosspost({ subredditName: destination, title: post.title });
       await context.redis.set(redisKey(postId), crosspost.id);
+      if (copyFlair) await applyFlair(context, crosspost.id, destination, flair);
       console.log(`crossposted ${postId} ("${title}") → r/${destination} as ${crosspost.id} (via flair update)`);
     } else if (!matches && existingCrosspostId) {
       try {
@@ -246,7 +275,7 @@ const seedForm = Devvit.createForm(
   },
   async (event, context) => {
     const count = Math.min(Math.max(1, Math.round((event.values.count as number) ?? 25)), 50);
-    const { destination, flairFilter, excludeFlair, titleRegex } = await getSettings(
+    const { destination, flairFilter, excludeFlair, titleRegex, copyFlair } = await getSettings(
       context as unknown as TriggerContext,
     );
 
@@ -272,6 +301,7 @@ const seedForm = Devvit.createForm(
       try {
         const crosspost = await post.crosspost({ subredditName: destination, title: post.title });
         await context.redis.set(redisKey(post.id), crosspost.id);
+        if (copyFlair) await applyFlair(context as unknown as TriggerContext, crosspost.id, destination, flair);
         crossposted++;
         console.log(`seed: crossposted ${post.id} ("${post.title}") → r/${destination} as ${crosspost.id}`);
       } catch (err) {

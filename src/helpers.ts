@@ -33,17 +33,20 @@ export async function getSettings(context: TriggerContext): Promise<{
   flairFilter: string;
   excludeFlair: string;
   titleRegex: string;
+  copyFlair: boolean;
 }> {
-  const [destination, flairFilter, excludeFlair, titleRegex] = await Promise.all([
+  const [destination, flairFilter, excludeFlair, titleRegex, copyFlair] = await Promise.all([
     context.settings.get<string>('destination_subreddit'),
     context.settings.get<string>('flair_filter'),
     context.settings.get<string>('exclude_flair'),
     context.settings.get<string>('title_regex'),
+    context.settings.get<boolean>('copy_flair'),
   ]);
   return {
     destination: destination ?? '',
     flairFilter: flairFilter ?? '',
     excludeFlair: excludeFlair ?? '',
     titleRegex: titleRegex ?? '',
+    copyFlair: copyFlair ?? false,
   };
 }
