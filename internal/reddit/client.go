@@ -99,19 +99,23 @@ func (c *Client) SearchByFlair(ctx context.Context, subreddit, flair string, lim
 // since go-reddit's Post struct does not expose link_flair_text.
 func (c *Client) FetchFlair(ctx context.Context, postID string) (string, error) {
 	url := fmt.Sprintf("%s/by_id/t3_%s", oauthBase, postID)
+	return fetchFlairFromURL(ctx, c.rawHTTP, url)
+}
+
+func fetchFlairFromURL(ctx context.Context, client *http.Client, url string) (string, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return "", err
 	}
 
-	resp, err := c.rawHTTP.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("fetch post %s: %w", postID, err)
+		return "", fmt.Errorf("fetch %s: %w", url, err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("fetch post %s: HTTP %d", postID, resp.StatusCode)
+		return "", fmt.Errorf("fetch %s: HTTP %d", url, resp.StatusCode)
 	}
 
 	var body struct {
@@ -124,10 +128,10 @@ func (c *Client) FetchFlair(ctx context.Context, postID string) (string, error) 
 		} `json:"data"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
-		return "", fmt.Errorf("decode post %s: %w", postID, err)
+		return "", fmt.Errorf("decode %s: %w", url, err)
 	}
 	if len(body.Data.Children) == 0 {
-		return "", fmt.Errorf("post %s not found", postID)
+		return "", fmt.Errorf("post not found at %s", url)
 	}
 	return body.Data.Children[0].Data.LinkFlairText, nil
 }

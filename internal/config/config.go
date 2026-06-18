@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -65,6 +66,9 @@ func credentialsFromEnv() Credentials {
 	}
 }
 
+// CompileForTest compiles the title regex. Called internally by Load and by tests.
+func (f *Filter) CompileForTest() error { return f.compile() }
+
 func (f *Filter) compile() error {
 	if f.TitleRegex == "" {
 		return nil
@@ -83,7 +87,7 @@ func (f *Filter) Match(title, flair string) bool {
 	if f.titleRe != nil && !f.titleRe.MatchString(title) {
 		return false
 	}
-	if f.Flair != "" && flair != f.Flair {
+	if f.Flair != "" && !strings.EqualFold(flair, f.Flair) {
 		return false
 	}
 	return true

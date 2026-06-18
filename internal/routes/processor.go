@@ -12,8 +12,18 @@ import (
 
 const defaultFetchLimit = 25
 
+type redditClient interface {
+	NewPosts(ctx context.Context, subreddit string, limit int) ([]*reddit.Post, error)
+	SearchByFlair(ctx context.Context, subreddit, flair string, limit int) ([]*reddit.Post, error)
+	IsDuplicate(ctx context.Context, post *reddit.Post, destSubreddit string) (bool, error)
+	Crosspost(ctx context.Context, post *reddit.Post, destSubreddit string) error
+	BotPostsInSub(ctx context.Context, subreddit string) ([]*reddit.Post, error)
+	FetchFlair(ctx context.Context, postID string) (string, error)
+	DeletePost(ctx context.Context, fullID string) error
+}
+
 type Processor struct {
-	client *reddit.Client
+	client redditClient
 	cfg    *config.Config
 }
 
