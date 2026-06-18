@@ -162,7 +162,7 @@ Devvit.addTrigger({
     } else if (!matches && existingCrosspostId) {
       // Flair changed away from the target — remove the crosspost.
       const crosspost = await context.reddit.getPostById(existingCrosspostId);
-      await crosspost.remove(false);
+      await crosspost.delete();
       await context.redis.del(redisKey(postId));
       console.log(`removed crosspost ${existingCrosspostId} (source ${postId} flair changed to "${flair}")`);
     }
