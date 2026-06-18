@@ -1,74 +1,48 @@
 # Reddit Reposter
 
-Reposts Reddit posts from one subreddit to another based on title regex and flair filters. Useful for curating a subset of content or surfacing specific posts to a smaller audience.
+A [Devvit](https://developers.reddit.com) app that crossposts Reddit posts from the subreddit it's installed on to a destination subreddit, filtered by flair and/or title.
 
-Posts whose flair is set or changed after creation are handled correctly — the service re-evaluates candidates on every run using Reddit's search API.
+Flair assigned or changed after a post is created is handled automatically via the `PostFlairUpdate` trigger. Crossposts are deleted if the source post's flair later changes away from the target flair.
 
-## Reddit app setup
+## Prerequisites
 
-1. Go to https://www.reddit.com/prefs/apps and create a new app
-2. Choose **script** as the app type
-3. Set redirect URI to `http://localhost` (unused but required)
-4. Note the **client ID** (under the app name) and **client secret**
+- [Devvit CLI](https://developers.reddit.com/docs/devvit_cli): `npm install -g devvit`
+- Moderator access on both the source and destination subreddits
 
-## Configuration
-
-Copy the example config and edit it:
+## Setup
 
 ```sh
-cp config.yaml.example config.yaml
+npm install
+devvit login
+devvit upload          # publishes the app to Reddit's developer platform
 ```
 
-```yaml
-# config.yaml
-routes:
-  - source: leagueoflegends        # source subreddit (no r/ prefix)
-    destination: my_lol_highlights  # destination subreddit
-    filters:
-      title_regex: '^\[Highlight\]' # optional; Go regexp syntax
-      flair: "Highlight"            # optional; exact match (case-insensitive)
-```
-
-Both filters are optional. If neither is set, all new posts from the source are reposted.
-
-## Credentials
-
-Set these environment variables (never put them in `config.yaml`):
+Then install the app on your source subreddit:
 
 ```sh
-export REDDIT_CLIENT_ID=your_client_id
-export REDDIT_CLIENT_SECRET=your_client_secret
-export REDDIT_USERNAME=your_bot_account
-export REDDIT_PASSWORD=your_bot_password
+devvit install <source-subreddit>
 ```
 
-## Running
+After installation, configure the app settings in the subreddit's mod tools under **Installed Apps**:
 
-**Run once** (suitable for cron):
+| Setting | Required | Description |
+|---|---|---|
+| Destination subreddit | Yes | Where to crosspost (without `r/`) |
+| Flair filter | No | Only crosspost posts with this exact flair (case-insensitive). Leave blank to crosspost all posts. |
+| Title regex | No | Only crosspost posts whose title matches this JavaScript RegExp. Leave blank to match all titles. |
+
+## How it works
+
+1. **`PostCreate`** — when a post is created with matching flair (or when there is no flair filter), it is crossposted immediately.
+2. **`PostFlairUpdate`** — when flair is added or changed:
+   - If it now matches the filter and hasn't been crossposted: crosspost it.
+   - If it no longer matches and was previously crossposted: remove the crosspost.
+
+Post IDs are tracked in Redis (`xpost:{sourcePostId} → crosspostId`) to prevent duplicates and enable deletion.
+
+## Development
+
 ```sh
-go run ./cmd/reposter --config config.yaml
+devvit playtest <source-subreddit>   # live test on a real subreddit
+npm run build                         # compile only
 ```
-
-**Run as a daemon** (polls on an interval):
-```sh
-go run ./cmd/reposter --config config.yaml --daemon --interval 10m
-```
-
-**Docker:**
-```sh
-docker build -t reddit-reposter .
-docker run --rm \
-  -e REDDIT_CLIENT_ID -e REDDIT_CLIENT_SECRET \
-  -e REDDIT_USERNAME -e REDDIT_PASSWORD \
-  -v $(pwd)/config.yaml:/config.yaml \
-  reddit-reposter
-```
-
-## GitHub Actions deployment
-
-1. Push the repo to GitHub
-2. Add the four Reddit credential secrets in **Settings → Secrets and variables → Actions**
-3. Push to `main` — the `release` workflow builds and pushes the image to `ghcr.io/<you>/reddit-reposter:latest`
-4. The `cron` workflow then runs automatically every 15 minutes using that image
-
-Trigger a manual run anytime via **Actions → Cron Repost → Run workflow**.

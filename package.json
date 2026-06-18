@@ -1,0 +1,17 @@
+{
+  "name": "reddit-reposter",
+  "version": "0.0.1",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "devvit build",
+    "upload": "devvit upload",
+    "playtest": "devvit playtest"
+  },
+  "dependencies": {
+    "@devvit/public-api": "0.13.4"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3"
+  }
+}
