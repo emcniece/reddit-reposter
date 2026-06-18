@@ -5,6 +5,7 @@
   "private": true,
   "scripts": {
     "build": "devvit build",
+    "test": "vitest run",
     "upload": "devvit upload",
     "playtest": "devvit playtest"
   },
@@ -12,7 +13,8 @@
     "@devvit/public-api": "0.13.4"
   },
   "devDependencies": {
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.9"
   },
   "license": "BSD-3-Clause"
 }
