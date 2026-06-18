@@ -8,36 +8,55 @@ Devvit.configure({ redditAPI: true, redis: true });
 
 Devvit.addSettings([
   {
-    name: 'destination_subreddit',
-    label: 'Destination subreddit (without r/)',
-    helpText: 'Posts that match the filters below will be crossposted here. Leave blank when installing on the destination subreddit in monitor mode.',
-    type: 'string',
-    scope: SettingScope.Installation,
-    isSecret: false,
+    type: 'group',
+    label: 'Source mode — crosspost from this subreddit',
+    helpText:
+      'Use this mode when installing on the subreddit you want to crosspost FROM. ' +
+      'Set a destination subreddit to activate source mode. ' +
+      'Posts that match the flair and title filters will be automatically crossposted.',
+    fields: [
+      {
+        name: 'destination_subreddit',
+        label: 'Destination subreddit (without r/)',
+        helpText: 'Where matching posts will be crossposted. Leave blank if this is a monitor installation.',
+        type: 'string',
+        scope: SettingScope.Installation,
+        isSecret: false,
+      },
+      {
+        name: 'flair_filter',
+        label: 'Flair to match (leave blank to match all flairs)',
+        helpText: 'Case-insensitive. Only posts with this exact flair are crossposted. Posts flaired after creation are caught automatically.',
+        type: 'string',
+        scope: SettingScope.Installation,
+        isSecret: false,
+      },
+      {
+        name: 'exclude_flair',
+        label: 'Flair to exclude (leave blank to exclude nothing)',
+        helpText: 'Case-insensitive. Posts with this flair are never crossposted. Also used in monitor mode — set the same value on both installations.',
+        type: 'string',
+        scope: SettingScope.Installation,
+        isSecret: false,
+      },
+      {
+        name: 'title_regex',
+        label: 'Title regex filter (leave blank to match all titles)',
+        helpText: 'JavaScript RegExp syntax. Example: ^\\[OC\\]',
+        type: 'string',
+        scope: SettingScope.Installation,
+        isSecret: false,
+      },
+    ],
   },
   {
-    name: 'flair_filter',
-    label: 'Flair to match (leave blank to match all flairs)',
-    helpText: 'Case-insensitive. When set, only posts with this exact flair are crossposted. Posts flaired after creation are caught automatically.',
-    type: 'string',
-    scope: SettingScope.Installation,
-    isSecret: false,
-  },
-  {
-    name: 'exclude_flair',
-    label: 'Flair to exclude (leave blank to exclude nothing)',
-    helpText: 'Case-insensitive. Posts with this flair are never crossposted. If a crossposted post is later given this flair, the crosspost is removed. Required for monitor mode.',
-    type: 'string',
-    scope: SettingScope.Installation,
-    isSecret: false,
-  },
-  {
-    name: 'title_regex',
-    label: 'Title regex filter (leave blank to match all titles)',
-    helpText: 'JavaScript RegExp syntax. Example: ^\\[OC\\]',
-    type: 'string',
-    scope: SettingScope.Installation,
-    isSecret: false,
+    type: 'group',
+    label: 'Monitor mode — auto-remove crossposts on this subreddit',
+    helpText:
+      'Use this mode when installing on the subreddit you want to crosspost TO. ' +
+      'Leave "Destination subreddit" blank and set "Flair to exclude" to the same value as the source installation. ' +
+      'The app will check source post flairs every 5 minutes and delete any crosspost whose source gains the excluded flair.',
+    fields: [],
   },
 ]);
 
