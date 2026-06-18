@@ -9,11 +9,12 @@ Devvit.configure({ redditAPI: true, redis: true });
 Devvit.addSettings([
   {
     type: 'group',
-    label: 'Source mode — crosspost from this subreddit',
+    label: 'Installation modes',
     helpText:
-      'Use this mode when installing on the subreddit you want to crosspost FROM. ' +
-      'Set a destination subreddit to activate source mode. ' +
-      'Posts that match the flair and title filters will be automatically crossposted.',
+      'SOURCE MODE (install on the subreddit you crosspost FROM): set a Destination subreddit below. ' +
+      'Posts matching your flair and title filters will be crossposted automatically.\n\n' +
+      'MONITOR MODE (install on the subreddit you crosspost TO): leave Destination subreddit blank and set Flair to exclude. ' +
+      'The app will check source post flairs every 5 minutes and delete any crosspost whose source gains the excluded flair.',
     fields: [
       {
         name: 'destination_subreddit',
@@ -48,15 +49,6 @@ Devvit.addSettings([
         isSecret: false,
       },
     ],
-  },
-  {
-    type: 'group',
-    label: 'Monitor mode — auto-remove crossposts on this subreddit',
-    helpText:
-      'Use this mode when installing on the subreddit you want to crosspost TO. ' +
-      'Leave "Destination subreddit" blank and set "Flair to exclude" to the same value as the source installation. ' +
-      'The app will check source post flairs every 5 minutes and delete any crosspost whose source gains the excluded flair.',
-    fields: [],
   },
 ]);
 
