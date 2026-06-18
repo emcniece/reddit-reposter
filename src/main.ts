@@ -24,6 +24,14 @@ Devvit.addSettings([
     isSecret: false,
   },
   {
+    name: 'exclude_flair',
+    label: 'Flair to exclude (leave blank to exclude nothing)',
+    helpText: 'Case-insensitive. Posts with this flair are never crossposted. If a crossposted post is later given this flair, the crosspost is removed.',
+    type: 'string',
+    scope: SettingScope.Installation,
+    isSecret: false,
+  },
+  {
     name: 'title_regex',
     label: 'Title regex filter (leave blank to match all titles)',
     helpText: 'JavaScript RegExp syntax. Example: ^\\[OC\\]',
@@ -44,13 +52,18 @@ function redisKey(sourcePostId: string): string {
 }
 
 /**
- * Returns true if the post's title and flair pass the configured filters.
- * An empty filter value matches everything.
+ * Returns true if the post's title and flair pass all configured filters.
+ * Empty filter values are ignored (match everything).
  */
-function matchesFilters(title: string, flair: string, flairFilter: string, titleRegex: string): boolean {
-  if (flairFilter && flair.toLowerCase() !== flairFilter.toLowerCase()) {
-    return false;
-  }
+function matchesFilters(
+  title: string,
+  flair: string,
+  flairFilter: string,
+  excludeFlair: string,
+  titleRegex: string,
+): boolean {
+  if (flairFilter && flair.toLowerCase() !== flairFilter.toLowerCase()) return false;
+  if (excludeFlair && flair.toLowerCase() === excludeFlair.toLowerCase()) return false;
   if (titleRegex) {
     try {
       if (!new RegExp(titleRegex).test(title)) return false;
@@ -64,16 +77,19 @@ function matchesFilters(title: string, flair: string, flairFilter: string, title
 async function getSettings(context: TriggerContext): Promise<{
   destination: string;
   flairFilter: string;
+  excludeFlair: string;
   titleRegex: string;
 }> {
-  const [destination, flairFilter, titleRegex] = await Promise.all([
+  const [destination, flairFilter, excludeFlair, titleRegex] = await Promise.all([
     context.settings.get<string>('destination_subreddit'),
     context.settings.get<string>('flair_filter'),
+    context.settings.get<string>('exclude_flair'),
     context.settings.get<string>('title_regex'),
   ]);
   return {
     destination: destination ?? '',
     flairFilter: flairFilter ?? '',
+    excludeFlair: excludeFlair ?? '',
     titleRegex: titleRegex ?? '',
   };
 }
@@ -86,7 +102,7 @@ async function getSettings(context: TriggerContext): Promise<{
 Devvit.addTrigger({
   event: 'PostCreate',
   async onEvent(event, context) {
-    const { destination, flairFilter, titleRegex } = await getSettings(context);
+    const { destination, flairFilter, excludeFlair, titleRegex } = await getSettings(context);
     if (!destination) return;
 
     const postId = event.post?.id;
@@ -95,11 +111,12 @@ Devvit.addTrigger({
 
     if (!postId) return;
 
-    // If a flair filter is configured but the post has no flair yet, wait —
+    // If a positive flair filter is set but the post has no flair yet, wait —
     // PostFlairUpdate will fire when flair is assigned.
+    // (An exclude-only filter does not need to wait: no flair = not excluded.)
     if (flairFilter && !flair) return;
 
-    if (!matchesFilters(title, flair, flairFilter, titleRegex)) return;
+    if (!matchesFilters(title, flair, flairFilter, excludeFlair, titleRegex)) return;
 
     // Dedup: skip if we've already crossposted this post.
     const existing = await context.redis.get(redisKey(postId));
@@ -121,11 +138,11 @@ Devvit.addTrigger({
 Devvit.addTrigger({
   event: 'PostFlairUpdate',
   async onEvent(event, context) {
-    const { destination, flairFilter, titleRegex } = await getSettings(context);
+    const { destination, flairFilter, excludeFlair, titleRegex } = await getSettings(context);
     if (!destination) return;
 
-    // Flair change events are only relevant when filtering by flair.
-    if (!flairFilter) return;
+    // Flair change events are only relevant when at least one flair filter is set.
+    if (!flairFilter && !excludeFlair) return;
 
     const postId = event.post?.id;
     const title = event.post?.title ?? '';
@@ -134,7 +151,7 @@ Devvit.addTrigger({
     if (!postId) return;
 
     const existingCrosspostId = await context.redis.get(redisKey(postId));
-    const matches = matchesFilters(title, flair, flairFilter, titleRegex);
+    const matches = matchesFilters(title, flair, flairFilter, excludeFlair, titleRegex);
 
     if (matches && !existingCrosspostId) {
       // Flair now matches and we haven't crossposted yet — do it now.
